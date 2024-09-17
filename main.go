@@ -14,8 +14,10 @@ import (
 func main() {
 
 	client, err := api.ClientFromEnvironment()
+
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to load client: %v", err)
+		return
 	}
 
 	for {
@@ -29,23 +31,26 @@ func main() {
 		}
 
 		req := &api.GenerateRequest{
-			Model:  "llama3",
+			Model:  "phi3",
 			Prompt: prompt,
-
-			// set streaming to false
-			Stream: new(bool),
+			// Stream: new(bool),
+			Stream: func() *bool { b := true; return &b }(),
 		}
 
 		ctx := context.Background()
+
 		respFunc := func(resp api.GenerateResponse) error {
-			fmt.Println("Bot:", resp.Response)
+			fmt.Print(resp.Response)
 			return nil
 		}
 
 		err = client.Generate(ctx, req, respFunc)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("failed to generate: %v", err)
+			break
 		}
+
+		fmt.Println()
 	}
 }
 
@@ -59,8 +64,7 @@ func getUserInput(prompt string) string {
 	}
 
 	text = strings.TrimSuffix(text, "\n")
-	text = strings.TrimSuffix(text, "\n")
+	text = strings.TrimSuffix(text, "\r")
 
 	return text
-
 }
