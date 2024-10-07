@@ -1,11 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"golang-llms/filemanager"
-	"log"
-
-	"github.com/tmc/langchaingo/llms/huggingface"
+	"golang-llms/llms"
+	"golang-llms/rag"
 )
 
 func main() {
@@ -19,15 +18,31 @@ func main() {
 	// client.Run()
 
 	// Initialize the Rag struct with the input PDF file
-	embed, err := huggingface.New()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fm := filemanager.NewFileManager("test.pdf")
-	text, err := fm.ConvertPdfToText()
+
+	rg := rag.NewFileManager("test.pdf")
+	text, err := rg.ConvertPdfToText()
 
 	if err != nil {
 		fmt.Println("Error:", err)
-	} 
-	store := filemanager.SaveDocuments(text, embed)
+	}
+
+	store := rag.SaveDocuments(text)
+	searchQuery, err := llms.GetUserInput("User")
+
+	if err != nil {
+		fmt.Println("Error getting user input:", err)
+		return
+	}
+
+	resDocs, err := rag.Retriever(store, searchQuery)
+	// fmt.Println(resDocs)
+
+	answer, err := llms.GetAnswer(context.Background(), resDocs, searchQuery)
+	if err != nil {
+		fmt.Println("Error getting answer from LLM:", err)
+		return
+	}
+
+	fmt.Println("Answer generated from LLM:", answer)
+
 }
