@@ -27,7 +27,7 @@ func main() {
 	}
 
 	store := rag.SaveDocuments(text)
-	searchQuery, err := llms.GetUserInput("User")
+	searchQuery, err := llms.GetUserInput("User: ")
 
 	if err != nil {
 		fmt.Println("Error getting user input:", err)
@@ -35,13 +35,11 @@ func main() {
 	}
 
 	resDocs, err := rag.Retriever(store, searchQuery)
-	// fmt.Println(resDocs)
-
-	answer, err := llms.GetAnswer(context.Background(), resDocs, searchQuery)
 	if err != nil {
-		fmt.Println("Error getting answer from LLM:", err)
-		return
+		fmt.Println("Error getting relevant documents:", err)
 	}
+
+	answer := llms.GetAnswer(context.Background(), resDocs, searchQuery)
 
 	fmt.Println("Answer generated from LLM:", answer)
 

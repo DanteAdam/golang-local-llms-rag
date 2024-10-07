@@ -3,6 +3,7 @@ package llms
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -17,7 +18,7 @@ import (
 
 func llmOllama() *ollama.LLM {
 	llm, err := ollama.New(
-		ollama.WithModel("llama3"),
+		ollama.WithModel("llama3.1"),
 	)
 	if err != nil {
 		log.Fatalf("could not get ollama service: %v", err)
@@ -25,7 +26,7 @@ func llmOllama() *ollama.LLM {
 	return llm
 }
 
-func GetAnswer(ctx context.Context, docRetrieved []schema.Document, prompt string) (string, error) {
+func GetAnswer(ctx context.Context, docRetrieved []schema.Document, prompt string) string {
 	llm := llmOllama()
 	history := memory.NewChatMessageHistory()
 
@@ -34,9 +35,10 @@ func GetAnswer(ctx context.Context, docRetrieved []schema.Document, prompt strin
 	}
 
 	conversation := memory.NewConversationBuffer(memory.WithChatHistory(history))
+
 	executor := agents.NewExecutor(
+		
 		agents.NewConversationalAgent(llm, nil),
-		nil,
 		agents.WithMemory(conversation),
 	)
 
@@ -46,24 +48,20 @@ func GetAnswer(ctx context.Context, docRetrieved []schema.Document, prompt strin
 
 	res, err := chains.Run(ctx, executor, prompt, options...)
 	if err != nil {
-		return "", err
+		fmt.Println("Error running chains", err)
 	}
-	return res, nil
+
+	return res
 }
 
-func GetUserInput(promptString string) (string, error) {
-	fmt.Print(promptString, ": ")
-
+func GetUserInput(prompt string) (string, error) {
+	fmt.Printf("%v", prompt)
 	reader := bufio.NewReader(os.Stdin)
-
-	Input, err := reader.ReadString('\n')
+	text, err := reader.ReadString('\n')
 
 	if err != nil {
-		log.Fatalf("Could not get the user prompt")
+		return "", errors.New("could not get input prompt")
 	}
 
-	Input = strings.TrimSuffix(Input, "\n")
-	Input = strings.TrimSuffix(Input, "\r")
-
-	return Input, nil
+	return strings.TrimSpace(text), nil
 }
