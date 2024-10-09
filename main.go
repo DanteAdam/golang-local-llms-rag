@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"golang-llms/llms"
 	"golang-llms/rag"
@@ -38,8 +37,8 @@ func main() {
 	if err != nil {
 		fmt.Println("Error getting relevant documents:", err)
 	}
-
-	answer := llms.GetAnswer(context.Background(), resDocs, searchQuery)
+	
+	answer := llms.GetAnswer(resDocs, searchQuery)
 
 	fmt.Println("Answer generated from LLM:", answer)
 
