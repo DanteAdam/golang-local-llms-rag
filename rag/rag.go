@@ -59,7 +59,7 @@ func Embedder() *embeddings.EmbedderImpl {
 	)
 
 	if err != nil {
-		log.Fatalf("Error initializing Ollama:: %v", err)
+		log.Fatalf("Error initializing Ollama: %v", err)
 	}
 
 	ollamaEmbedder, err := embeddings.NewEmbedder(ollamaEmbedderModel)
@@ -96,7 +96,7 @@ func SaveDocuments(docs []schema.Document) *qdrant.Store {
 		return nil
 	}
 
-	fmt.Println("Create store")
+	fmt.Println("Document Processing ....")
 
 	return &store
 }
@@ -110,7 +110,7 @@ func Retriever(store *qdrant.Store, prompt string) ([]schema.Document, error) {
 	docRetrieved, err := retriever.GetRelevantDocuments(context.Background(), prompt)
 
 	if err != nil {
-		return nil, fmt.Errorf("Could not find relevant information: %v", err)
+		return nil, fmt.Errorf("could not find relevant information: %v", err)
 	}
 
 	return docRetrieved, nil

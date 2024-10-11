@@ -3,6 +3,7 @@ package llms
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -11,13 +12,12 @@ import (
 	"github.com/tmc/langchaingo/agents"
 	"github.com/tmc/langchaingo/chains"
 	"github.com/tmc/langchaingo/llms/ollama"
-	"github.com/tmc/langchaingo/memory"
 	"github.com/tmc/langchaingo/schema"
 )
 
 func llmOllama() *ollama.LLM {
 	llm, err := ollama.New(
-		ollama.WithModel("llama3"),
+		ollama.WithModel("llama3.1"),
 	)
 	if err != nil {
 		log.Fatalf("could not get ollama service: %v", err)
@@ -25,45 +25,54 @@ func llmOllama() *ollama.LLM {
 	return llm
 }
 
-func GetAnswer(ctx context.Context, docRetrieved []schema.Document, prompt string) (string, error) {
-	llm := llmOllama()
-	history := memory.NewChatMessageHistory()
+func GetAnswer(docRetrieved []schema.Document, prompt string) string {
 
+	llm := llmOllama()
+	ctx := context.Background()
+	// history := memory.NewChatMessageHistory()
+
+	context := ""
 	for _, doc := range docRetrieved {
-		history.AddAIMessage(ctx, doc.PageContent)
+		context = doc.PageContent + "/n"
 	}
 
-	conversation := memory.NewConversationBuffer(memory.WithChatHistory(history))
+	promptTemplate := fmt.Sprintf(`
+	You are a helpful document assistant. Use the provided context to accurately answer the question below:
+	Context: %v
+	Question: %v
+	Constraint:
+	- Your response must be in Vietnamese.
+	- Do no hallucination.`, context, prompt)
+
+	// conversation := memory.NewConversationBuffer(memory.WithChatHistory(history))
+
+	// fmt.Println(conversation)
+
 	executor := agents.NewExecutor(
 		agents.NewConversationalAgent(llm, nil),
-		nil,
-		agents.WithMemory(conversation),
+		// agents.WithMemory(conversation),
 	)
 
 	options := []chains.ChainCallOption{
 		chains.WithTemperature(0.8),
 	}
 
-	res, err := chains.Run(ctx, executor, prompt, options...)
+	res, err := chains.Run(ctx, executor, promptTemplate, options...)
 	if err != nil {
-		return "", err
+		fmt.Println("Error during chain execution:", err)
 	}
-	return res, nil
+	return res
+
 }
 
-func GetUserInput(promptString string) (string, error) {
-	fmt.Print(promptString, ": ")
-
+func GetUserInput(prompt string) (string, error) {
+	fmt.Printf("%v", prompt)
 	reader := bufio.NewReader(os.Stdin)
-
-	Input, err := reader.ReadString('\n')
+	text, err := reader.ReadString('\n')
 
 	if err != nil {
-		log.Fatalf("Could not get the user prompt")
+		return "", errors.New("could not get input prompt")
 	}
 
-	Input = strings.TrimSuffix(Input, "\n")
-	Input = strings.TrimSuffix(Input, "\r")
-
-	return Input, nil
+	return strings.TrimSpace(text), nil
 }
