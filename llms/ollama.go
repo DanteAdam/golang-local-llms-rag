@@ -1,78 +1,83 @@
 package llms
 
 import (
-	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"log"
-	"os"
-	"strings"
 
-	"github.com/tmc/langchaingo/agents"
-	"github.com/tmc/langchaingo/chains"
-	"github.com/tmc/langchaingo/llms/ollama"
+	"github.com/ollama/ollama/api"
 	"github.com/tmc/langchaingo/schema"
 )
 
-func llmOllama() *ollama.LLM {
-	llm, err := ollama.New(
-		ollama.WithModel("llama3.1"),
-	)
+func GetAnswer(docRetrieved []schema.Document, prompt string) (string,error) {
+	client, err := api.ClientFromEnvironment()
 	if err != nil {
-		log.Fatalf("could not get ollama service: %v", err)
+		panic("failed to load client")
 	}
-	return llm
-}
-
-func GetAnswer(docRetrieved []schema.Document, prompt string) string {
-
-	llm := llmOllama()
 	ctx := context.Background()
 	// history := memory.NewChatMessageHistory()
 
 	context := ""
 	for _, doc := range docRetrieved {
-		context = doc.PageContent + "/n"
+		context += doc.PageContent + "\n"
 	}
 
 	promptTemplate := fmt.Sprintf(`
 	You are a helpful document assistant. Use the provided context to accurately answer the question below:
-	Context: %v
-	Question: %v
-	Constraint:
-	- Your response must be in Vietnamese.
-	- Do no hallucination.`, context, prompt)
+	**Context**: %v
+	**Question**: %v
+	### Constraint:
+	- You must restrict your interaction within the confines of provided facts and context.
+	- Only use the information provided in the document/context.
+	- Do not speculate or add information that is not included in the provided context.
+	- Avoid providing personal opinions, or making inferences that aren't based on the provided facts and context.
+	- Response in the language compatible with the question.`, context, prompt)
+
+	req := &api.GenerateRequest{
+		Model:  "llama3.1", // Use the provided model name
+		Prompt: promptTemplate,
+		Stream: new(bool),
+	}
+	var result string
+	respFunc := func(resp api.GenerateResponse) error {
+		result += resp.Response 
+		return nil
+	}
+	err = client.Generate(ctx, req, respFunc)
+	if err != nil {
+		log.Fatal("Could not generate the response")
+	}
+	return result,nil
 
 	// conversation := memory.NewConversationBuffer(memory.WithChatHistory(history))
 
 	// fmt.Println(conversation)
 
-	executor := agents.NewExecutor(
-		agents.NewConversationalAgent(llm, nil),
-		// agents.WithMemory(conversation),
-	)
+	// executor := agents.NewExecutor(
+	// 	agents.NewConversationalAgent(llm, nil),
+	// agents.WithMemory(conversation),
+	// )
 
-	options := []chains.ChainCallOption{
-		chains.WithTemperature(0.8),
-	}
+	// options := []chains.ChainCallOption{
+	// 	chains.WithTemperature(0.8),
+	// }
 
-	res, err := chains.Run(ctx, executor, promptTemplate, options...)
-	if err != nil {
-		fmt.Println("Error during chain execution:", err)
-	}
-	return res
+	// res, err := chains.Run(ctx, executor, promptTemplate, options...)
+	// if err != nil {
+	// 	fmt.Println("Error during chain execution:", err)
+	// }
+	// return res
 
 }
 
-func GetUserInput(prompt string) (string, error) {
-	fmt.Printf("%v", prompt)
-	reader := bufio.NewReader(os.Stdin)
-	text, err := reader.ReadString('\n')
+// func GetUserInput(prompt string) (string, error) {
+// 	fmt.Printf(prompt)
+// 	reader := bufio.NewReader(os.Stdin)
+// 	text, err := reader.ReadString('\n')
 
-	if err != nil {
-		return "", errors.New("could not get input prompt")
-	}
+// 	if err != nil {
+// 		return "", errors.New("could not get input prompt")
+// 	}
 
-	return strings.TrimSpace(text), nil
-}
+// 	return strings.TrimSpace(text), nil
+// }

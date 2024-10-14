@@ -24,7 +24,7 @@ type FileManager struct {
 var (
 	collectionName = "go-rag"
 	QDRANT_URL     = "http://localhost:6333"
-	QDRANT_API     = "P1WigS4N-V6YGxoLs-o_qi4wmmgYQL2ttOH6L_-g3xf88I5vXPGJow"
+	QDRANT_API     = "your_api_key"
 )
 
 func (fm *FileManager) ConvertPdfToText() ([]schema.Document, error) {
@@ -103,7 +103,7 @@ func SaveDocuments(docs []schema.Document) *qdrant.Store {
 
 func Retriever(store *qdrant.Store, prompt string) ([]schema.Document, error) {
 	vectorOptions := []vectorstores.Option{
-		vectorstores.WithScoreThreshold(0.5),
+		vectorstores.WithScoreThreshold(0.6),
 	}
 
 	retriever := vectorstores.ToRetriever(store, 10, vectorOptions...)
