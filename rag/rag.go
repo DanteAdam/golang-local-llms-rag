@@ -24,7 +24,7 @@ type FileManager struct {
 var (
 	collectionName = "go-rag"
 	QDRANT_URL     = "http://localhost:6333"
-	QDRANT_API     = "your_api_key"
+	QDRANT_API     = "P1WigS4N-V6YGxoLs-o_qi4wmmgYQL2ttOH6L_-g3xf88I5vXPGJow"
 )
 
 func (fm *FileManager) ConvertPdfToText() ([]schema.Document, error) {
